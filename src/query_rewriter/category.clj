@@ -1,5 +1,5 @@
 (ns query-rewriter.category
-  (:require [query-rewriter.rewrite :as rewrite :refer [program-with-symbols rule run-program]]))
+  (:require [query-rewriter.rewrite :as rewrite :refer [program-with-symbols rule run-program apply-rules]]))
 
 ;; TODO defn category
 
@@ -150,6 +150,15 @@
 ;; TODO bi-functor
 ;; TODO initiality
 
+;;
+;; scratchpad for term rewriting
+;;
+
+;; TODO trampoline
+;; (defn simplify [form rules]
+;;   (match (compose m1 m2)
+;;     (apply-rules rules (compose (simplify m1) (simplify m2)))))
+
 (comment
   (require '[clojure.pprint :refer [pprint]])
 
@@ -164,7 +173,37 @@
   (pprint ((sum-cancellation-left-rule) 'ret))
   (pprint (run-program (sum (object :value :A) (object :value :B))))
   (pprint (run-program (inject-left)))
-  (pprint (run-program (sum-cancellation-left-rule))))
+  (pprint (run-program (sum-cancellation-left-rule)))
+
+  (pprint (run-program (compose (morphism :category :set
+                                          :source (object :catecory :set :value :a)
+                                          :target (object :category :set :value :b))
+                                (identity))))
+
+  (require '[clojure.walk :as walk])
+
+  (let [rules [(left-identity-rule)
+               (right-identity-rule)]
+        ;; TODO can a rule restrict the validity of a logic program?
+        ;; - e.g. applying rule 'f idempotent' on '(* f f)' should not return anything
+        ;; TODO can tree be a logic program too? then it must apply to ALL solutions!
+        tree (first (run-program (compose (morphism :category :set
+                                                    :source (object :value :a)
+                                                    :target (object :value :b)
+                                                    :value :f)
+                                          (identity))))]
+    (query-rewriter.rewrite/apply-rules rules tree))
+  ;; output is mainly:
+  ;;
+  ;; (first (run-program (morphism :category :set
+  ;;                               :source (object :value :a)
+  ;;                               :target (object :value :b)
+  ;;                               :value :f))
+
+  
+  ;; )
+
+
 
 ;; TODO make dir-local: http://www.gnu.org/software/emacs/manual/html_node/emacs/Directory-Variables.html
 ;; Local Variables:

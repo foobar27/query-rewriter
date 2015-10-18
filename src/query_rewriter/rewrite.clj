@@ -76,13 +76,21 @@
 (defn run-program [program]
   (let [ret (gensym "ret")]
     (eval
-     `(do
-        (require 'clojure.core.logic)
-        (clojure.core.logic/run* [~ret]
-         ~@(program ret))))))
+     `(clojure.core.logic/run* [~ret]
+        ~@(program ret)))))
 
 ;; TODO rule macro with syntactic sugar?
 (defn rule [left right]
   (program-with-symbols [left right]
     [::rule left right]))
+
+(defn apply-rules [rules form]
+  (let [ret (gensym "ret")]
+    (eval
+     `(clojure.core.logic/run* [output#]
+        (logic/fresh [actual# ~ret]
+          (logic/== ~ret [::rule ~form output#])
+          (logic/conde
+           ~@(for [rule rules]
+               (vec (rule ret)))))))))
 
