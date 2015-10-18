@@ -19,8 +19,8 @@
 
 (defn compose [m1 m2]
   (program-with-symbols [m1 m2 :local o1 o2 o3]
-    ((morphism :source o1 :target o2) m1)
-    ((morphism :source o2 :target o3) m2)
+    ((morphism :source o1 :target o2) m2)
+    ((morphism :source o2 :target o3) m1)
     (morphism :source o1 :target o3 :value [::compose m1 m2])))
 
 (defn left-identity-rule []
