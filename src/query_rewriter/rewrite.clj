@@ -85,11 +85,12 @@
     [::rule left right]))
 
 (defn apply-rules [rules form]
-  (let [ret (gensym "ret")]
+  (let [ret (gensym "ret")
+        output (gensym "output")]
     (eval
-     `(clojure.core.logic/run* [output#]
+     `(clojure.core.logic/run* [~output]
         (logic/fresh [~ret]
-          (logic/== ~ret [::rule ~form output#])
+          ~@((rule form output) ret)
           (logic/conde
            ~@(for [rule rules]
                (vec (rule ret)))))))))
