@@ -33,18 +33,15 @@
     (rule (compose f (identity))
           f)))
 
+(defn associativity-rule-1 []
+  (program-with-symbols [:local m1 m2 m3]
+    (rule (compose m3 (compose m2 m1))
+          (compose (compose m3 m2) m1))))
 
-
-
-
-;; (defrule associativity-rule-1 [m1 m2 m3]
-;;   (compose m3 (compose m2 m1))
-;;   -> (compose (compose m3 m2) m1))
-
-;; (defrule associativity-rule-2 [m1 m2 m3]
-;;   (compose (compose m3 m2) m1)
-;;   -> (compose m3 (compose m2 m1)))
-
+(defn associativity-rule-2 []
+  (program-with-symbols [:local m1 m2 m3]
+    (rule (compose (compose m3 m2) m1)
+          (compose m3 (compose m2 m1)))))
 
 ;;
 ;; products
@@ -54,33 +51,90 @@
 ;; TODO require project-left & co to be defined dependently on the category
 ;; TODO split, project-left, project-right
 
-;; (defrule product-cancellation-left-rule [f g]
-;;   (compose (project-left) (split f g))
-;;   -> f)
+(defn product [o1 o2]
+  (program-with-symbols [o1 o2 :local category]
+    ((object :category category) o1)
+    ((object :category category) o2)
+    ;; TODO verify that product exists
+    ;; TODO initiality constraint
+    ;; TODO 2-category embeddings
+    (object :category category :value [::product o1 o2])))
 
-;; (defrule product-cancellation-right-rule [f g]
-;;   (compose (project-right) (split f g))
-;;   -> g)
+(defn project-left []
+  (program-with-symbols [:local o1 o2]
+    (morphism :source (product o1 o2)
+              :target o1
+              :value ::project-left)))
 
-;; (defpattern morphism-product [f g]
-;;   (split (compose f (project-left))
-;;          (compose g (project-right))))
+(defn project-right []
+  (program-with-symbols [:local o1 o2]
+    (morphism :source (product o1 o2)
+              :target o2
+              :value ::project-right)))
+
+(defn split [f g]
+  (program-with-symbols [f g :local a b c]
+    ((morphism :source c :target a) f)
+    ((morphism :source c :target b) g)
+    (morphism :source c :target (product a b) :value [::split f g])))
+
+(defn product-cancellation-left-rule []
+  (program-with-symbols [:local f g]
+    (rule (compose (project-left) (split f g))
+          f)))
+
+(defn product-cancellation-right-rule []
+  (program-with-symbols [:local f g]
+    (rule (compose (project-right) (split f g))
+          g)))
+
+;; TODO overload 'product'?
+(defn morphism-product [f g]
+  (program-with-symbols [f g]
+    (split (compose f (project-left))
+           (compose g (project-right)))))
 
 ;;
 ;; sums
 ;;
 
-;; (defrule sum-cancellation-left-rule [f g]
-;;   (compose (junc f g) (inject-left))
-;;   -> f)
+(defn sum [o1 o2]
+  (program-with-symbols [o1 o2 :local category]
+    ((object :category category) o1)
+    ((object :category category) o2)
+    (object :category category :value [::sum o1 o2])))
 
-;; (defrule sum-cancellation-right-rule [f g]
-;;   (compose (junc f g) (inject-right))
-;;   -> g)
+(defn inject-left []
+  (program-with-symbols [:local o1 o2]
+    (morphism :source o1 :target (sum o1 o2) :value ::inject-left)))
 
-;; (defpattern morphism-sum [f g]
-;;   (split (compose (inject-left) f)
-;;          (compose (inject-right) g)))
+(defn inject-right []
+  (program-with-symbols [:local o1 o2]
+    (morphism :source o2 :target (sum o1 o2) :value ::inject-right)))
+
+(defn junc [f g]
+  (program-with-symbols [f g :local a b c]
+    ((morphism :source a :target c) f)
+    ((morphism :source b :target c) g)
+    (morphism :source (sum a b) :target c :value [::junc f g])))
+
+(defn sum-cancellation-left-rule []
+  (program-with-symbols [:local f g]
+    (rule (compose (junc f g) (inject-left))
+          f)))
+
+(defn sum-cancellation-right-rule []
+  (program-with-symbols [:local f g]
+    (rule (compose (junc f g) (inject-right))
+          g)))
+
+;; TODO overload 'sum'?
+(defn morphism-sum [f g]
+  (program-with-symbols [f g])
+  (junc (compose (inject-left) f)
+        (compose (inject-right) g)))
+
+;; TODO distributivity (via bi-functoriality?)
 
 ;;
 ;; monads
@@ -92,30 +146,25 @@
 ;; unsorted
 ;;
 
-;; [:morphism
-;;  C
-;;  [A B]
-;;  [:compose
-;;   [:morphism
-;;    C
-;;    [B B]
-;;    'identity]
-;;   [:morphism
-;;    C
-;;    [A B]
-;;    f]]]
-;; -> [:morphism C [A B] f]
-
 ;; TODO functor
 ;; TODO bi-functor
 ;; TODO initiality
 
 (comment
   (require '[clojure.pprint :refer [pprint]])
-  (pprint ((compose 'm1 'm2) 'ret))
 
-  (pprint (run-program (left-identity-rule))))
-
+  (pprint
+   (macroexpand-1
+    '(program-with-symbols [:local o1 o2]
+       (morphism :source (product o1 o2)
+                 :target o1
+                 :value ::project-left))))
+  
+  
+  (pprint ((sum-cancellation-left-rule) 'ret))
+  (pprint (run-program (sum (object :value :A) (object :value :B))))
+  (pprint (run-program (inject-left)))
+  (pprint (run-program (sum-cancellation-left-rule))))
 
 ;; TODO make dir-local: http://www.gnu.org/software/emacs/manual/html_node/emacs/Directory-Variables.html
 ;; Local Variables:
