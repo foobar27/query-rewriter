@@ -88,7 +88,7 @@
   (let [ret (gensym "ret")]
     (eval
      `(clojure.core.logic/run* [output#]
-        (logic/fresh [actual# ~ret]
+        (logic/fresh [~ret]
           (logic/== ~ret [::rule ~form output#])
           (logic/conde
            ~@(for [rule rules]
